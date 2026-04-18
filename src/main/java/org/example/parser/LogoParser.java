@@ -1,6 +1,7 @@
 package org.example.parser;
 
 import org.example.model.Procedure;
+import org.example.model.Variable;
 
 import java.util.HashMap;
 import java.util.List;
@@ -11,20 +12,32 @@ public class LogoParser {
     private int current  = 0;
     
     private final Map<String, Procedure> procedures = new HashMap<>();
+    private final Map<String, Variable> variables = new HashMap<>();
 
     public LogoParser(List<Token> tokens) {
         this.tokens = tokens;
     }
-    
-    public Map<String, Procedure> parse(){
-        while(peek().type != Token.Type.EOF){
+
+    public void parse() {
+        while (peek().type != Token.Type.EOF) {
             Token token = advance();
 
-            if(token.type == Token.Type.TO){
+            if (token.type == Token.Type.TO) {
                 parseProcedureDeclaration(token);
+            } else if (token.type == Token.Type.MAKE) {
+                parseMakeDeclaration(token); // Wyłapujemy słowo MAKE
             }
         }
-        return procedures;
+    }
+
+    private void parseMakeDeclaration(Token makeToken) {
+        if (peek().type == Token.Type.EOF) return;
+
+        Token nameToken = advance();
+        if (nameToken.type == Token.Type.WORD) {
+            String cleanName = nameToken.text.substring(1).toUpperCase();
+            variables.put(cleanName, new Variable(cleanName, nameToken.line, nameToken.column));
+        }
     }
 
     private void parseProcedureDeclaration(Token toToken) {
@@ -40,6 +53,12 @@ public class LogoParser {
                     toToken.column
             );
             procedures.put(nameToken.text, procedure);
+
+            while (peek().type == Token.Type.VARIABLE) {
+                Token argToken = advance();
+                String cleanName = argToken.text.substring(1).toUpperCase();
+                variables.put(cleanName, new Variable(cleanName, argToken.line, argToken.column));
+            }
         }
 
     }
