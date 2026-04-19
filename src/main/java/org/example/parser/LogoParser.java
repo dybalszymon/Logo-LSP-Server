@@ -72,4 +72,7 @@ public class LogoParser {
         return tokens.get(current - 1);
     }
 
+    public Map<String, Procedure> getProcedures() { return procedures; }
+    public Map<String, Variable> getVariables() { return variables; }
+
 }
