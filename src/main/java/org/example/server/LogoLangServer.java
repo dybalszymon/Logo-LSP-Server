@@ -1,7 +1,4 @@
-
-
 package org.example.server;
-
 
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.services.*;
@@ -42,6 +39,7 @@ public class LogoLangServer implements LanguageServer, LanguageClientAware {
         options.setFull(true);
 
         capabilities.setSemanticTokensProvider(options);
+        capabilities.setHoverProvider(true);
 
         return CompletableFuture.completedFuture(new InitializeResult(capabilities));
     }

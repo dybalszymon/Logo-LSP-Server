@@ -14,6 +14,11 @@ import org.example.parser.Token;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
+import org.eclipse.lsp4j.Hover;
+import org.eclipse.lsp4j.HoverParams;
+import org.eclipse.lsp4j.MarkupContent;
+import org.eclipse.lsp4j.MarkupKind;
+
 public class LogoTextDocService implements TextDocumentService {
 
     private final Map<String, String> openDocuments = new HashMap<>();
@@ -173,6 +178,78 @@ public class LogoTextDocService implements TextDocumentService {
             case NUMBER -> 3;
 
             default -> -1;
+        };
+    }
+
+    public CompletableFuture<Hover> hover(HoverParams params){
+        return CompletableFuture.supplyAsync(() -> {
+            String uri = params.getTextDocument().getUri();
+            String text = openDocuments.get(uri);
+            if(text == null) return null;
+
+            int line  = params.getPosition().getLine();
+            int column = params.getPosition().getCharacter();
+
+            String wordUnderCursor = extractWordAt(text, line, column).toUpperCase();
+            if(wordUnderCursor.isEmpty()) return null;
+
+            String cleanWord = wordUnderCursor;
+            if (cleanWord.startsWith(":") || cleanWord.startsWith("\"")) {
+                cleanWord = cleanWord.substring(1);
+            }
+
+            String description = getCommandDescription(cleanWord);
+
+            if(description == null){
+                Lexer lexer = new Lexer(text);
+                LogoParser parser = new LogoParser(lexer.tokenize());
+                parser.parse();
+
+                if (parser.getProcedures().containsKey(cleanWord)) {
+                    description = "**User Procedure:** `" + cleanWord + "`\n\nPress F12 to go to definition.";
+                } else if (parser.getVariables().containsKey(cleanWord)) {
+                    description = "**Variable:** `" + cleanWord + "`";
+                }
+            }
+
+            if (description != null) {
+                MarkupContent markupContent = new MarkupContent(MarkupKind.MARKDOWN, description);
+                return new Hover(markupContent);
+            }
+            return null;
+        });
+    }
+
+    private String getCommandDescription(String command) {
+        return switch (command) {
+            case "TO" -> "**TO**\n\nBegins the definition of a new procedure.";
+            case "END" -> "**END**\n\nEnds the definition of a procedure.";
+            case "REPEAT" -> "**REPEAT**\n\nRepeats a block of commands a specified number of times.\n\n*Example:* `REPEAT 4 [FD 100 RT 90]`";
+            case "IF" -> "**IF**\n\nExecutes a block of commands if the condition is true.";
+            case "IFELSE" -> "**IFELSE**\n\nExecutes the first block if true, or the second block if false.";
+            case "MAKE" -> "**MAKE**\n\nAssigns a value to a variable.\n\n*Example:* `MAKE \"SIZE 50`";
+            case "FOR" -> "**FOR**\n\nA standard counting loop.";
+            case "WHILE" -> "**WHILE**\n\nRepeats a block of commands as long as the condition is true.";
+            case "STOP" -> "**STOP**\n\nHalts the execution of the current procedure and returns to the caller.";
+            case "OUTPUT", "OP" -> "**OUTPUT (OP)**\n\nReturns a value from a procedure.";
+
+            case "FD", "FORWARD" -> "**FORWARD (FD)**\n\nMoves the turtle forward by the specified number of steps.\n\n*Example:* `FD 100`";
+            case "BK", "BACK", "BACKWARD" -> "**BACKWARD (BK)**\n\nMoves the turtle backward without changing its heading.";
+            case "RT", "RIGHT" -> "**RIGHT (RT)**\n\nTurns the turtle right (clockwise) by the specified angle in degrees.";
+            case "LT", "LEFT" -> "**LEFT (LT)**\n\nTurns the turtle left by the specified angle.";
+            case "HOME" -> "**HOME**\n\nMoves the turtle to the center of the screen (0,0) and points it straight up.";
+            case "SETXY" -> "**SETXY**\n\nMoves the turtle to the specified X and Y coordinates.";
+
+            case "CS", "CLEARSCREEN" -> "**CLEARSCREEN (CS)**\n\nClears the screen and returns the turtle to the home position.";
+            case "PU", "PENUP" -> "**PENUP (PU)**\n\nLifts the pen. The turtle will move without drawing a line.";
+            case "PD", "PENDOWN" -> "**PENDOWN (PD)**\n\nLowers the pen. The turtle will leave a trail when moving.";
+            case "HT", "HIDETURTLE" -> "**HIDETURTLE (HT)**\n\nHides the turtle cursor to speed up drawing.";
+            case "ST", "SHOWTURTLE" -> "**SHOWTURTLE (ST)**\n\nShows the turtle cursor.";
+            case "SETPENSIZE", "SETWIDTH" -> "**SETPENSIZE**\n\nSets the thickness of the pen.";
+            case "SETCOLOR", "SETPC" -> "**SETCOLOR**\n\nSets the pen color.";
+            case "SETBG", "SETBACKGROUND" -> "**SETBACKGROUND (SETBG)**\n\nSets the background color of the screen.";
+
+            default -> null;
         };
     }
 }
