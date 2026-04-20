@@ -32,7 +32,7 @@ public class LogoLangServer implements LanguageServer, LanguageClientAware {
 
         SemanticTokensLegend legend = new SemanticTokensLegend(
                 Arrays.asList("keyword", "string", "variable", "number", "operator"),
-                Collections.emptyList()
+                Arrays.asList("declaration")
         );
         SemanticTokensWithRegistrationOptions options = new SemanticTokensWithRegistrationOptions();
         options.setLegend(legend);

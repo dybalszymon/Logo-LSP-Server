@@ -152,9 +152,14 @@ public class LogoTextDocService implements TextDocumentService {
                 int prevLine = 0;
                 int prevChar = 0;
 
+                Token previousToken = null;
+
                 for(Token token : tokens){
                     int tokenTypeIndex = getTokenTypeIndex(token);
-                    if(tokenTypeIndex == -1) continue;
+                    if(tokenTypeIndex == -1) {
+                        previousToken = token;
+                        continue;
+                    }
 
                     int deltaLine = token.line - prevLine;
                     int deltaStart;
@@ -164,14 +169,20 @@ public class LogoTextDocService implements TextDocumentService {
                         deltaStart = token.column;
                     }
                     int length = token.text.length();
+
+                    int modifierBitmask = 0;
+                    if (previousToken != null && previousToken.type == Token.Type.TO) {
+                        modifierBitmask = 1;
+                    }
                     data.add(deltaLine); //move down
                     data.add(deltaStart); //move right;
                     data.add(length); //word length
                     data.add(tokenTypeIndex); //color type
-                    data.add(0); // modifiers
+                    data.add(modifierBitmask); // modifiers
 
                     prevLine = token.line;
                     prevChar = token.column;
+                    previousToken = token;
                 }
                 return new SemanticTokens(data);
 
@@ -190,8 +201,7 @@ public class LogoTextDocService implements TextDocumentService {
 
             case FORWARD, BACKWARD, RIGHT, LEFT, HOME, SETXY,
                     CLEARSCREEN, PENUP, PENDOWN, HIDETURTLE, SHOWTURTLE,
-                    SETPENSIZE, SETCOLOR, SETBACKGROUND,
-                    IDENTIFIER -> 1;
+                    SETPENSIZE, SETCOLOR, SETBACKGROUND -> 1;
 
             case VARIABLE, WORD -> 2;
 
