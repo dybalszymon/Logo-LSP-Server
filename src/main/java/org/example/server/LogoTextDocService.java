@@ -2,11 +2,14 @@ package org.example.server;
 
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
+import org.eclipse.lsp4j.services.LanguageClient;
+import org.eclipse.lsp4j.services.LanguageServer;
 import org.eclipse.lsp4j.services.TextDocumentService;
 import org.example.model.Procedure;
 import org.example.model.Variable;
 import org.example.parser.Lexer;
 import org.example.parser.LogoParser;
+import org.example.parser.Token;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -14,13 +17,16 @@ import java.util.concurrent.CompletableFuture;
 public class LogoTextDocService implements TextDocumentService {
 
     private final Map<String, String> openDocuments = new HashMap<>();
-
-
+    private LanguageClient client;
+    public void setClient(LanguageClient client) {
+        this.client = client;
+    }
     @Override
     public void didOpen(DidOpenTextDocumentParams params) {
         String uri = params.getTextDocument().getUri();
         String text = params.getTextDocument().getText();
         openDocuments.put(uri, text);
+        validateDocument(uri, text);
     }
 
     @Override
@@ -28,6 +34,7 @@ public class LogoTextDocService implements TextDocumentService {
         String uri = params.getTextDocument().getUri();
         String newText = params.getContentChanges().get(0).getText();
         openDocuments.put(uri, newText);
+        validateDocument(uri, newText);
     }
 
     @Override
@@ -38,6 +45,16 @@ public class LogoTextDocService implements TextDocumentService {
     @Override
     public void didSave(DidSaveTextDocumentParams params) {
 
+    }
+
+    private void validateDocument(String uri, String text){
+        if(client == null) return;
+        Lexer lexer = new Lexer(text);
+        LogoParser parser = new LogoParser(lexer.tokenize());
+        parser.parse();
+        List<Diagnostic> diagnostic = parser.getDiagnostics();
+        PublishDiagnosticsParams diagnosticParams = new PublishDiagnosticsParams(uri, diagnostic);
+        client.publishDiagnostics(diagnosticParams);
     }
 
     @Override
@@ -102,5 +119,60 @@ public class LogoTextDocService implements TextDocumentService {
 
     private boolean isLogoIdentifierChar(char c) {
         return Character.isLetterOrDigit(c) || c == ':' || c == '"' || c == '_';
+    }
+
+    @Override
+    public CompletableFuture<SemanticTokens> semanticTokensFull(SemanticTokensParams params){
+        return CompletableFuture.supplyAsync(() -> {
+            String uri = params.getTextDocument().getUri();
+            String text = openDocuments.get(uri);
+
+            if(text == null) return new SemanticTokens(Collections.emptyList());
+
+            Lexer lexer = new Lexer(text);
+            List<Token> tokens = lexer.tokenize();
+
+            List<Integer> data = new ArrayList<>();
+            int prevLine = 0;
+            int prevChar = 0;
+
+            for(Token token : tokens){
+                int tokenTypeIndex = getTokenTypeIndex(token);
+                if(tokenTypeIndex == -1) continue;
+                int deltaLine = token.line - prevLine;
+                int deltaStart;
+                if(deltaLine == 0){
+                    deltaStart = token.column - prevChar;
+                }else{
+                    deltaStart = token.column;
+                }
+                int length = token.text.length();
+                data.add(deltaLine); //move down
+                data.add(deltaStart); //move right;
+                data.add(length); //word length
+                data.add(tokenTypeIndex); //color type
+                data.add(0); // modifiers
+
+                prevLine = token.line;
+                prevChar = token.column;
+            }
+            return new SemanticTokens(data);
+        });
+    }
+
+    private int getTokenTypeIndex(Token token) {
+        return switch (token.type) {
+            case TO, END, REPEAT, IF, IFELSE, MAKE, FOR, WHILE, STOP, OUTPUT -> 0;
+
+            case FORWARD, BACKWARD, RIGHT, LEFT, HOME, SETXY,
+                    CLEARSCREEN, PENUP, PENDOWN, HIDETURTLE, SHOWTURTLE,
+                    SETPENSIZE, SETCOLOR, SETBACKGROUND -> 1;
+
+            case VARIABLE, WORD -> 2;
+
+            case NUMBER -> 3;
+
+            default -> -1;
+        };
     }
 }

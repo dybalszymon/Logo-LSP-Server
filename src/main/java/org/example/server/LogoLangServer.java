@@ -3,15 +3,15 @@
 package org.example.server;
 
 
-import org.eclipse.lsp4j.InitializeParams;
-import org.eclipse.lsp4j.InitializeResult;
-import org.eclipse.lsp4j.ServerCapabilities;
-import org.eclipse.lsp4j.TextDocumentSyncKind;
+import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.services.*;
+
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 
 public class LogoLangServer implements LanguageServer, LanguageClientAware {
-    private final TextDocumentService textDocumentService;
+    private final LogoTextDocService textDocumentService;
     private final WorkspaceService workspaceService;
     private LanguageClient client;
 
@@ -22,7 +22,9 @@ public class LogoLangServer implements LanguageServer, LanguageClientAware {
 
     @Override
     public void connect(LanguageClient languageClient) {
+
         this.client = languageClient;
+        this.textDocumentService.setClient(client);
     }
 
     @Override
@@ -30,6 +32,16 @@ public class LogoLangServer implements LanguageServer, LanguageClientAware {
         ServerCapabilities capabilities = new ServerCapabilities();
         capabilities.setTextDocumentSync(TextDocumentSyncKind.Full);
         capabilities.setDefinitionProvider(true);
+
+        SemanticTokensLegend legend = new SemanticTokensLegend(
+                Arrays.asList("keyword", "function", "variable", "number"),
+                Collections.emptyList()
+        );
+        SemanticTokensWithRegistrationOptions options = new SemanticTokensWithRegistrationOptions();
+        options.setLegend(legend);
+        options.setFull(true);
+
+        capabilities.setSemanticTokensProvider(options);
 
         return CompletableFuture.completedFuture(new InitializeResult(capabilities));
     }

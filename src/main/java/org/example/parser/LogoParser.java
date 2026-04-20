@@ -1,11 +1,20 @@
 package org.example.parser;
 
+import org.eclipse.lsp4j.DiagnosticSeverity;
+import org.eclipse.lsp4j.Position;
+import org.eclipse.lsp4j.Range;
 import org.example.model.Procedure;
 import org.example.model.Variable;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.eclipse.lsp4j.Diagnostic;
+import org.eclipse.lsp4j.DiagnosticSeverity;
+import org.eclipse.lsp4j.Position;
+import org.eclipse.lsp4j.Range;
 
 public class LogoParser {
     private final List<Token> tokens;
@@ -13,6 +22,7 @@ public class LogoParser {
     
     private final Map<String, Procedure> procedures = new HashMap<>();
     private final Map<String, Variable> variables = new HashMap<>();
+    private final List<Diagnostic> diagnostics = new ArrayList<>();
 
     public LogoParser(List<Token> tokens) {
         this.tokens = tokens;
@@ -25,7 +35,20 @@ public class LogoParser {
             if (token.type == Token.Type.TO) {
                 parseProcedureDeclaration(token);
             } else if (token.type == Token.Type.MAKE) {
-                parseMakeDeclaration(token); // Wyłapujemy słowo MAKE
+                parseMakeDeclaration(token);
+            } else if (token.type == Token.Type.IDENTIFIER){
+                if (!procedures.containsKey(token.text) && !variables.containsKey(token.text)) {
+                    Diagnostic diagnostic = new Diagnostic();
+                    diagnostic.setSeverity(DiagnosticSeverity.Error);
+                    diagnostic.setMessage("Unknown command: '" + token.text);
+
+                    diagnostic.setRange(new Range(
+                            new Position(token.line, token.column),
+                            new Position(token.line, token.column + token.text.length())
+                    ));
+
+                    diagnostics.add(diagnostic);
+                }
             }
         }
     }
@@ -74,5 +97,6 @@ public class LogoParser {
 
     public Map<String, Procedure> getProcedures() { return procedures; }
     public Map<String, Variable> getVariables() { return variables; }
+    public List<Diagnostic> getDiagnostics() { return diagnostics; }
 
 }
