@@ -52,10 +52,10 @@ public class Lexer {
         return tokens;
     }
     private void next(){
-        if(input.charAt(pos) == '\n'){
+        if (pos < input.length() && input.charAt(pos) == '\n') {
             line++;
             col = 0;
-        }else{
+        } else {
             col++;
         }
         pos++;
@@ -70,7 +70,7 @@ public class Lexer {
         StringBuilder sb = new StringBuilder();
         sb.append(input.charAt(pos)); // Dodaj znak ':'
         next();
-        while (pos < input.length() && Character.isLetterOrDigit(input.charAt(pos)) || input.charAt(pos) == '_') {
+        while (pos < input.length() && (Character.isLetterOrDigit(input.charAt(pos)) || input.charAt(pos) == '_')) {
             sb.append(input.charAt(pos));
             next();
         }
@@ -133,6 +133,12 @@ public class Lexer {
     private Token readNumber() {
         StringBuilder sb = new StringBuilder();
         int startCol = col;
+
+        if (pos < input.length() && input.charAt(pos) == '-') {
+            sb.append('-');
+            next();
+        }
+
         while (pos < input.length() && Character.isDigit(input.charAt(pos))) {
             sb.append(input.charAt(pos));
             next();

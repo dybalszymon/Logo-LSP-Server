@@ -139,39 +139,48 @@ public class LogoTextDocService implements TextDocumentService {
     @Override
     public CompletableFuture<SemanticTokens> semanticTokensFull(SemanticTokensParams params){
         return CompletableFuture.supplyAsync(() -> {
-            String uri = params.getTextDocument().getUri();
-            String text = openDocuments.get(uri);
+            try {
+                String uri = params.getTextDocument().getUri();
+                String text = openDocuments.get(uri);
 
-            if(text == null) return new SemanticTokens(Collections.emptyList());
+                if(text == null) return new SemanticTokens(Collections.emptyList());
 
-            Lexer lexer = new Lexer(text);
-            List<Token> tokens = lexer.tokenize();
+                Lexer lexer = new Lexer(text);
+                List<Token> tokens = lexer.tokenize();
 
-            List<Integer> data = new ArrayList<>();
-            int prevLine = 0;
-            int prevChar = 0;
+                List<Integer> data = new ArrayList<>();
+                int prevLine = 0;
+                int prevChar = 0;
 
-            for(Token token : tokens){
-                int tokenTypeIndex = getTokenTypeIndex(token);
-                if(tokenTypeIndex == -1) continue;
-                int deltaLine = token.line - prevLine;
-                int deltaStart;
-                if(deltaLine == 0){
-                    deltaStart = token.column - prevChar;
-                }else{
-                    deltaStart = token.column;
+                for(Token token : tokens){
+                    int tokenTypeIndex = getTokenTypeIndex(token);
+                    if(tokenTypeIndex == -1) continue;
+
+                    int deltaLine = token.line - prevLine;
+                    int deltaStart;
+                    if(deltaLine == 0){
+                        deltaStart = token.column - prevChar;
+                    }else{
+                        deltaStart = token.column;
+                    }
+                    int length = token.text.length();
+                    data.add(deltaLine); //move down
+                    data.add(deltaStart); //move right;
+                    data.add(length); //word length
+                    data.add(tokenTypeIndex); //color type
+                    data.add(0); // modifiers
+
+                    prevLine = token.line;
+                    prevChar = token.column;
                 }
-                int length = token.text.length();
-                data.add(deltaLine); //move down
-                data.add(deltaStart); //move right;
-                data.add(length); //word length
-                data.add(tokenTypeIndex); //color type
-                data.add(0); // modifiers
+                return new SemanticTokens(data);
 
-                prevLine = token.line;
-                prevChar = token.column;
+            } catch (Throwable e) {
+                if (client != null) {
+                    client.logMessage(new MessageParams(MessageType.Error, "CRASH W SEMANTIC TOKENS: " + e.toString()));
+                }
+                throw new RuntimeException(e);
             }
-            return new SemanticTokens(data);
         });
     }
 
@@ -181,11 +190,15 @@ public class LogoTextDocService implements TextDocumentService {
 
             case FORWARD, BACKWARD, RIGHT, LEFT, HOME, SETXY,
                     CLEARSCREEN, PENUP, PENDOWN, HIDETURTLE, SHOWTURTLE,
-                    SETPENSIZE, SETCOLOR, SETBACKGROUND -> 1;
+                    SETPENSIZE, SETCOLOR, SETBACKGROUND,
+                    IDENTIFIER -> 1;
 
             case VARIABLE, WORD -> 2;
 
             case NUMBER -> 3;
+
+            case BRACKET_OPEN, BRACKET_CLOSE, PAREN_OPEN, PAREN_CLOSE,
+                    PLUS, MINUS, MULTIPLY, DIVIDE, EQUALS, LESS_THAN, GREATER_THAN -> 4;
 
             default -> -1;
         };
