@@ -2,28 +2,20 @@ package org.example.parser;
 
 public class Token {
     public enum Type {
-        // --- Słowa kluczowe: Sterowanie i Procedury ---
         TO, END, REPEAT, IF, IFELSE, MAKE, FOR, WHILE, STOP, OUTPUT,
-
-        // --- Słowa kluczowe: Ruch i Pozycja ---
         FORWARD, BACKWARD, RIGHT, LEFT, HOME, SETXY,
-
-        // --- Słowa kluczowe: Ekran i Pióro ---
         CLEARSCREEN, PENUP, PENDOWN, HIDETURTLE, SHOWTURTLE, SETPENSIZE, SETCOLOR, SETBACKGROUND,
 
-        // --- Zmienne, Wartości, Identyfikatory ---
-        NUMBER,       // np. 100
-        IDENTIFIER,   // np. MOJ_KWADRAT
-        VARIABLE,     // np. :BOK
-        WORD,         // np. "CZERWONY
+        NUMBER,
+        IDENTIFIER,
+        VARIABLE,
+        WORD,
+        BRACKET_OPEN, BRACKET_CLOSE,
+        PAREN_OPEN, PAREN_CLOSE,
+        PLUS, MINUS, MULTIPLY, DIVIDE,
+        EQUALS, LESS_THAN, GREATER_THAN,
 
-        // --- Symbole i Operatory ---
-        BRACKET_OPEN, BRACKET_CLOSE, // [ ]
-        PAREN_OPEN, PAREN_CLOSE,     // ( )
-        PLUS, MINUS, MULTIPLY, DIVIDE, // + - * /
-        EQUALS, LESS_THAN, GREATER_THAN, // = < >
-
-        EOF // Koniec pliku
+        EOF
     }
     public final Type type;
     public final String text;

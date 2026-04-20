@@ -104,22 +104,32 @@ public class LogoTextDocService implements TextDocumentService {
         return location;
     }
 
-    private String extractWordAt(String text, int lineIdx, int columnIdx){
-        String[] lines = text.split("\n");
-        if(lineIdx >= lines.length || lineIdx < 0 )return "";
-        String line = lines[lineIdx];
-        if(columnIdx >= line.length() || columnIdx < 0) return "";
+    private String extractWordAt(String text, int lineIndex, int column) {
+        if (text == null || text.isEmpty()) return "";
+        String[] lines = text.split("\\r?\\n");
+        if (lineIndex < 0 || lineIndex >= lines.length) return "";
 
-        int start = columnIdx;
-        while(start > 0 && isLogoIdentifierChar(line.charAt(start - 1))){
-            start--;
+        String line = lines[lineIndex];
+
+        if (column < 0 || column >= line.length()) {
+            column = line.length() - 1;
         }
-        int end = columnIdx;
-        while(end < line.length() && isLogoIdentifierChar(line.charAt(end - 1))){
-            end++;
+        if (column < 0) return "";
+
+        int left = column;
+        while (left >= 0 && isLogoIdentifierChar(line.charAt(left))) {
+            left--;
         }
-        if(start < end) return line.substring(start, end);
-        return "";
+
+        int right = column;
+        while (right < line.length() && isLogoIdentifierChar(line.charAt(right))) {
+            right++;
+        }
+
+        int start = left + 1;
+        if (start >= right) return "";
+
+        return line.substring(start, right);
     }
 
     private boolean isLogoIdentifierChar(char c) {

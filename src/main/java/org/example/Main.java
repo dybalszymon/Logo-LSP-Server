@@ -27,10 +27,11 @@ public class Main {
             server.connect(client);
 
             Future<Void> startListening = launcher.startListening();
+
             startListening.get();
 
         } catch (Exception e) {
-            System.err.println("Starting LSP error: " + e.getMessage());
+            System.err.println("Błąd podczas uruchamiania serwera LSP: " + e.getMessage());
             e.printStackTrace();
             System.exit(1);
         }

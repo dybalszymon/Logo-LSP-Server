@@ -18,17 +18,15 @@ public class Lexer {
             char ch = input.charAt(pos);
             if (Character.isWhitespace(ch)) {
                 next();
-            } else if (Character.isLetter(ch)) {
+            } else if (Character.isLetter(ch) || ch == '_') {
                 tokens.add(readIdentifierOrKeyword());
             } else if (Character.isDigit(ch) || (ch == '-' && isNextDigit())) {
-                // Obsługa liczb (również ujemnych)
                 tokens.add(readNumber());
             } else if (ch == ':') {
                 tokens.add(readVariable());
             } else if (ch == '"') {
                 tokens.add(readWord());
             } else {
-                // Symbole pojedyncze
                 Token.Type type = switch (ch) {
                     case '[' -> Token.Type.BRACKET_OPEN;
                     case ']' -> Token.Type.BRACKET_CLOSE;
@@ -47,7 +45,7 @@ public class Lexer {
                 if (type != null) {
                     tokens.add(new Token(type, String.valueOf(ch), line, col));
                 }
-                next(); // Nawet jeśli znak jest nieznany (null), idziemy dalej
+                next();
             }
         }
         tokens.add(new Token(Token.Type.EOF, "", line, col));
@@ -72,7 +70,7 @@ public class Lexer {
         StringBuilder sb = new StringBuilder();
         sb.append(input.charAt(pos)); // Dodaj znak ':'
         next();
-        while (pos < input.length() && Character.isLetterOrDigit(input.charAt(pos))) {
+        while (pos < input.length() && Character.isLetterOrDigit(input.charAt(pos)) || input.charAt(pos) == '_') {
             sb.append(input.charAt(pos));
             next();
         }
@@ -83,7 +81,7 @@ public class Lexer {
         StringBuilder sb = new StringBuilder();
         sb.append(input.charAt(pos)); // Dodaj znak '"'
         next();
-        while (pos < input.length() && Character.isLetterOrDigit(input.charAt(pos))) {
+        while (pos < input.length() && (Character.isLetterOrDigit(input.charAt(pos))) || input.charAt(pos) == '_') {
             sb.append(input.charAt(pos));
             next();
         }
@@ -92,7 +90,7 @@ public class Lexer {
     private Token readIdentifierOrKeyword() {
         StringBuilder sb = new StringBuilder();
         int startCol = col;
-        while (pos < input.length() && Character.isLetter(input.charAt(pos))) {
+        while (pos < input.length() && Character.isLetter(input.charAt(pos)) || input.charAt(pos) == '_') {
             sb.append(input.charAt(pos));
             next();
         }
